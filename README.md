@@ -23,8 +23,7 @@ prepared disc from `/cd/`.
 ## Building for Dreamcast
 
 You need KallistiOS, an SH4 toolchain, and a configured KOS environment.
-The same KOS APIs as in the original r13 are used; the exact minimum required
-version has not been determined. Build from the project root:
+Build from the project root:
 
 ```sh
 source /opt/toolchains/dc/kos/environ.sh
@@ -74,8 +73,6 @@ make -C tools/ngcdconv windows
 
 The converter produces `TOC.BIN`, `DATA.ISO`, and `TRKnn.NGA`. NGA uses lossy
 IMA ADPCM compression; blocks are independent, with one block per CD sector.
-The file formats are fully compatible with r13, so previously prepared discs
-do not need to be converted again.
 
 Place the following files in the root of the future Dreamcast boot disc filesystem:
 
@@ -89,8 +86,7 @@ Place the following files in the root of the future Dreamcast boot disc filesyst
 | `TRK02.NGA`, … | All audio tracks produced by the converter |
 
 BIOS and game files are not included in the archive. A self-booting CDI must be
-created separately using your preferred Dreamcast disc mastering tool. Use
-`ngcd-dc.elf` or the new `1ST_READ.BIN` instead of the old `ssrpg.elf`.
+created separately using your preferred Dreamcast disc mastering tool.
 
 ## Controls
 
@@ -149,7 +145,5 @@ build to be configured independently of KOS variables.
 | `tools/ngcdconv` | Converter source, Windows EXE, separate build |
 | `mk` | Separate Dreamcast and PC build rules |
 | `tests` | Synthetic integration tests |
-
-
 
 
