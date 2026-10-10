@@ -1,0 +1,7 @@
+/build/
+/ngcd-dc.elf
+/1ST_READ.BIN
+/tools/ngcdconv/ngcdconv
+*.o
+*.d
+__pycache__/
