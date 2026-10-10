@@ -149,7 +149,6 @@ build to be configured independently of KOS variables.
 | `tools/ngcdconv` | Converter source, Windows EXE, separate build |
 | `mk` | Separate Dreamcast and PC build rules |
 | `tests` | Synthetic integration tests |
-| `docs` | Extraction notes and inherited limitations |
 
 
 
