@@ -1,0 +1,25 @@
+# build output
+*.o
+*.elf
+*.bin
+!src/**/*.bin
+1ST_READ.BIN
+build/
+src/cpu/raze/raze.s
+host/ngcd_host
+tools/ngcdconv/ngcdconv
+tools/ngcdconv/ngcdconv.exe
+
+# BIOS, games, converted discs (not part of the project)
+NEOCD.BIN
+NG_LO.ROM
+neocd.bin
+*.rom
+DATA.ISO
+TOC.BIN
+*.NGA
+*.cue
+*.iso
+*.cdi
+*.gdi
+*.7z

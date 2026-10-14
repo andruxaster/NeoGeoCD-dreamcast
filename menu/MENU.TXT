@@ -1,0 +1,5 @@
+# folder|title[|emulator binary, default NGCD.BIN]
+@SAMURAI SHODOWN ANTHOLOGY
+SSI|Samurai Spirits
+SSII|Samurai Spirits II
+SSIII|Samurai Spirits III
