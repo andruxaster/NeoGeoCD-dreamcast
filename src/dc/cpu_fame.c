@@ -127,6 +127,8 @@ void cpu_set_irq(int level, int vector) {
 }
 
 uint32_t cpu_pc(void) { return m68k_get_pc(); }
+uint32_t cpu_areg(int n) { return m68kcontext.areg[n & 7]; }
+int cpu_irq_mask(void) { return (m68kcontext.sr >> 8) & 7; }
 
 #ifdef NGCD_DEBUG
 #include <stdio.h>

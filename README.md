@@ -21,6 +21,7 @@ BIOS files and games are not included.
 | Samurai Shodown IV | runs in the PC build and the SH4 code path under qemu; not tried on a Dreamcast |
 | Shinsetsu Samurai Spirits: Bushidō Retsuden (English translation 1.10) | runs |
 | Metal Slug | runs; use `cpu=18` (see [NGCD.CFG](#ngcdcfg)) to avoid the game's own slowdown |
+| Metal Slug 2 | runs; use `cpu=24` (the game's own slowdown is heavier) |
 | Neo Turf Masters | runs |
 
 "Runs" means tested on a Dreamcast or in Flycast: menus, loading, gameplay.
@@ -41,7 +42,8 @@ BIOS files and games are not included.
 - Saves: the CDZ's 8 KB backup RAM goes to the first VMU (`NGCDBAK`),
   ~2 s after it changes. Shared by all games, as on the CDZ.
 - Two players on two controllers.
-- Optional overclocked 68000 per game (`NGCD.CFG`).
+- Optional overclocked 68000 per game (`NGCD.CFG`); the 68000's wait loops
+  are skipped, so overclocking costs little.
 - Several games on one disc with a menu ([anthology](#several-games-on-one-disc)).
 
 ## Building
@@ -91,7 +93,18 @@ with bosses and many explosions) slow down much less. Timers, video, sound
 and CD keep the real speed; only the 68000 gets more cycles per frame. The
 cost is Dreamcast CPU time: in Metal Slug a frame's emulation takes ~20 %
 longer at 18 MHz and ~40 % at 24 MHz. 18 MHz is a good choice; at 24 MHz the
-heaviest scenes may skip frames.
+heaviest scenes may skip frames. Metal Slug 2 slows down more than the first
+game: `cpu=24` there (12 MHz: the 68000 misses ~30 % of the game's frames,
+18 MHz ~18 %, 24 MHz ~1 %).
+
+`idle` — `idle=0` turns off skipping of the 68000's wait loops (on by
+default). While a game waits for the next frame in a short loop that only
+reads RAM (`tst`/`btst`/`cmpi` + `beq`/`bne`, or `bclr` + `beq`), the
+emulator does not execute it until an interrupt arrives. This saves much of
+the overclocking cost: Metal Slug 2 at 24 MHz averages less Dreamcast time
+than without skipping at 12 MHz; the heaviest frames, where the game does
+not wait at all, cost the same. Loops that write memory (Metal Slug's) are
+not skipped.
 
 ## Several games on one disc
 
@@ -183,7 +196,8 @@ core was compared with neocd_libretro frame by frame.
 
 `script` is a list of button presses `frame:keys,frame:keys`, keys
 `U D L R a b c d S s` (S Start, s Select), each held for 8 frames.
-`NGCD_CPU_MHZ=18` in the environment sets the 68000 clock.
+`NGCD_CPU_MHZ=18` in the environment sets the 68000 clock, `NGCD_IDLE=0`
+turns wait-loop skipping off.
 
 ## Fixes to third-party cores
 

@@ -24,3 +24,5 @@ int32_t cpu_elapsed(void) { return m68k_cycles_run(); }
 void cpu_end_slice(void) { m68k_end_timeslice(); }
 void cpu_set_irq(int level, int vector) { irq_vector = vector; m68k_set_irq(level); }
 uint32_t cpu_pc(void) { return m68k_get_reg(NULL, M68K_REG_PC); }
+uint32_t cpu_areg(int n) { return m68k_get_reg(NULL, (m68k_register_t)(M68K_REG_A0 + (n & 7))); }
+int cpu_irq_mask(void) { return (m68k_get_reg(NULL, M68K_REG_SR) >> 8) & 7; }

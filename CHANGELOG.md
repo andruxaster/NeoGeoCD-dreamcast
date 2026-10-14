@@ -3,6 +3,17 @@
 PC-build frames and audio were checked byte for byte against the previous
 revision after every change that was not meant to alter emulation.
 
+## r12
+- The 68000's wait loops are skipped: a two-instruction loop that only
+  reads RAM (`tst`/`btst`/`cmpi` + `beq`/`bne`, `bclr` + `beq`) found at the
+  end of a slice is not executed until the 68000's interrupt line changes;
+  running slices are at most 1/32 frame. `idle=0` in `NGCD.CFG`
+  (`NGCD_IDLE=0` for the PC build) turns it off. Metal Slug 2 at 24 MHz:
+  1.13M SH4 instructions per frame on average instead of 2.02M (1.39M at
+  12 MHz without skipping). Emulation timing changes slightly, so PC-build
+  frames differ from r11 in games with such loops.
+- Debug log: 68000 clock and skipped wait slices in `ngcd/frame`.
+
 ## r11
 - Anthology: the L+R+Start return to the menu was removed (it crashed in
   `arch_shutdown` on a real console); `MENU.BIN` is no longer needed on the

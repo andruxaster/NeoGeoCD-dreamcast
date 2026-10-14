@@ -186,6 +186,91 @@ static int32_t timeslice(void) {
     return s < 1 ? 1 : s;
 }
 
+/* ------------------------------------------------------------ wait loops */
+/* Games wait for the next frame in a loop such as
+       bclr  #7,($808D,a5)   ; Metal Slug 2
+       beq.s *-6
+   which only an interrupt can end. When the 68000 is found in such a loop
+   at the end of a slice and no interrupt it can take is pending, the
+   following slices are not executed until the interrupt line changes
+   (time, timers, Z80 and CD go on as usual). Only two-instruction loops
+   that read RAM and change nothing are taken: TST / BTST / CMPI of memory
+   + BEQ.S / BNE.S back to it, and BCLR + BEQ.S (it only clears a bit that
+   is already 0 while looping). Loops that count or write (Metal Slug's)
+   are left alone. Saves most of the 68000 time spent waiting, which grows
+   with an overclocked 68000. */
+int ngcd_idle_skip = 1;
+uint32_t ngcd_idle_slices;
+static int idle_now;
+static uint32_t irq_stamp, idle_stamp;
+static int irq_level_now;
+#ifndef NGCD_IDLE_SLICE_DIV
+#define NGCD_IDLE_SLICE_DIV 32
+#endif
+int32_t idle_slice_max = NGCD_CYCLES_PER_FRAME / NGCD_IDLE_SLICE_DIV;
+
+static inline uint16_t ram_w16(uint32_t a) { return *(const uint16_t *)(ng.ram + (a & 0x1FFFFE)); }
+
+/* length in bytes of an effective address extension for the allowed modes,
+   and the address it reads (RAM only), or -1 */
+static int ea_ram(int mode, int reg, uint32_t ext_at, uint32_t *addr) {
+    if (mode == 5) {                                   /* (d16,An) */
+        if (reg == 7) return -1;
+        *addr = cpu_areg(reg) + (uint32_t)(int32_t)(int16_t)ram_w16(ext_at);
+        return 2;
+    }
+    if (mode == 7 && reg == 0) { *addr = (uint32_t)(int32_t)(int16_t)ram_w16(ext_at); return 2; }
+    if (mode == 7 && reg == 1) { *addr = ((uint32_t)ram_w16(ext_at) << 16) | ram_w16(ext_at + 2); return 4; }
+    return -1;
+}
+
+/* the test instruction at t: its length, or 0 if not an allowed one;
+   *bclr set for BCLR #n */
+static int loop_test(uint32_t t, int *bclr) {
+    uint16_t op = ram_w16(t);
+    int mode = (op >> 3) & 7, reg = op & 7, len, e;
+    uint32_t a;
+    *bclr = 0;
+    if ((op & 0xFFC0) == 0x0800 || (op & 0xFFC0) == 0x0880) {      /* BTST / BCLR #n,<ea> */
+        *bclr = (op & 0xFFC0) == 0x0880;
+        e = ea_ram(mode, reg, t + 4, &a); len = 4;
+    } else if ((op & 0xFF00) == 0x4A00 && (op & 0xC0) != 0xC0) {   /* TST.x <ea> */
+        e = ea_ram(mode, reg, t + 2, &a); len = 2;
+    } else if ((op & 0xFF00) == 0x0C00 && (op & 0xC0) != 0xC0) {   /* CMPI.x #imm,<ea> */
+        int imm = (op & 0xC0) == 0x80 ? 4 : 2;
+        e = ea_ram(mode, reg, t + 2 + imm, &a); len = 2 + imm;
+    } else {
+        return 0;
+    }
+    if (e < 0 || (a & 0xFFFFFF) >= NGCD_RAM_SIZE) return 0;
+    return len + e;
+}
+
+/* is pc inside a skippable wait loop */
+static int idle_loop_at(uint32_t pc) {
+    if (pc >= NGCD_RAM_SIZE - 16 || (pc & 1)) return 0;
+    for (int k = 0; k < 2; k++) {
+        uint32_t t;
+        if (k == 0) {
+            t = pc;                                         /* at the test */
+        } else {
+            uint16_t b = ram_w16(pc);                       /* at the branch */
+            if ((b & 0xFE00) != 0x6600 || (b & 0xFF) == 0 || (b & 0xFF) == 0xFF) return 0;
+            t = pc + 2 + (uint32_t)(int32_t)(int8_t)(b & 0xFF);
+        }
+        int bclr, len = loop_test(t, &bclr);
+        if (!len) continue;
+        uint32_t bpc = t + len;
+        uint16_t b = ram_w16(bpc);
+        if ((b & 0xFE00) != 0x6600) continue;              /* BNE.S / BEQ.S */
+        if (bpc + 2 + (uint32_t)(int32_t)(int8_t)(b & 0xFF) != t) continue;
+        if (bclr && (b & 0xFF00) != 0x6700) continue;      /* BCLR only with BEQ */
+        if (pc != t && pc != bpc) continue;
+        return 1;
+    }
+    return 0;
+}
+
 /* ------------------------------------------------------------ interrupts */
 void ngcd_update_irq(void) {
     int level = 0, vector = 0;
@@ -193,6 +278,7 @@ void ngcd_update_irq(void) {
     if (ng.pending_irq & IRQ_CDDEC)  { level = 2; ng.cd_vector = 0x54; vector = 0x54 / 4; }
     if (ng.pending_irq & IRQ_CDCOMM) { level = 2; ng.cd_vector = 0x58; vector = 0x58 / 4; }
     if (ng.pending_irq & IRQ_RASTER) { level = 3; vector = 0x64 / 4; }
+    if (level != irq_level_now) { irq_level_now = level; irq_stamp++; }
     cpu_set_irq(level, vector);
 }
 
@@ -351,6 +437,9 @@ void ngcd_run_frame(void) {
     while (ng.remaining > 0) {
         int32_t slice = timeslice();
         if (slice > ng.remaining) slice = ng.remaining;
+        /* a wait loop is only noticed at the end of a slice: keep running
+           slices short enough not to spin in it for long */
+        if (ngcd_idle_skip && !idle_now && slice > idle_slice_max) slice = idle_slice_max;
         int32_t req = M2CPU(slice);
         if (req < 1) req = 1;
 #ifdef NGCD_DEBUG
@@ -358,9 +447,21 @@ void ngcd_run_frame(void) {
         if (ngcd_fine) req = 4;
 #endif
         ng.slice_len = slice;
-        ng.in_slice = 1;
-        int32_t executed = cpu_run(req);
-        ng.in_slice = 0;
+        int32_t executed;
+        if (idle_now && irq_stamp == idle_stamp) {
+            executed = req;                    /* waiting for an interrupt */
+            ngcd_idle_slices++;
+        } else {
+            idle_now = 0;
+            ng.in_slice = 1;
+            executed = cpu_run(req);
+            ng.in_slice = 0;
+            if (ngcd_idle_skip && executed >= req && irq_level_now <= cpu_irq_mask() &&
+                idle_loop_at(cpu_pc())) {
+                idle_now = 1;
+                idle_stamp = irq_stamp;
+            }
+        }
 #ifdef NGCD_DEBUG
         if (ngcd_fine) { extern void ngcd_debug_line(void); ngcd_debug_line(); }
 #endif

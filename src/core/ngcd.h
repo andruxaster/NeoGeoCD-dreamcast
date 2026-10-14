@@ -241,6 +241,12 @@ int32_t  cpu_elapsed(void);                 /* 68k cycles into the current run *
 void     cpu_end_slice(void);
 void     cpu_set_irq(int level, int vector); /* level 0 = none */
 uint32_t cpu_pc(void);
+uint32_t cpu_areg(int n);                   /* A0..A7, outside cpu_run */
+int      cpu_irq_mask(void);                /* SR interrupt mask 0..7 */
+
+/* 68000 wait loops are skipped (see ngcd.c idle_loop_at): 1 = on (default) */
+extern int ngcd_idle_skip;
+extern uint32_t ngcd_idle_slices;           /* slices skipped (statistics) */
 
 /* Z80 abstraction (z80_*.c) */
 void     z80if_init(void);

@@ -290,6 +290,7 @@ static void parse_toc(const uint8_t *b, uint32_t size) {
 }
 
 /* optional NGCD.CFG in the game folder, lines "key=value":
+     idle=0|1             skip the 68000's wait loops (default 1)
      cpu=12|15|18|21|24   68000 clock in MHz (12 = real hardware). More
                           makes games that slow down in heavy scenes (as
                           on the real console) slow down less, at a cost
@@ -308,6 +309,10 @@ static void load_config(void) {
         char *next = strchr(l, '\n');
         if (next) *next++ = 0;
         while (*l == ' ' || *l == '\t') l++;
+        if (!strncmp(l, "idle=", 5)) {
+            ngcd_idle_skip = atoi(l + 5) != 0;
+            dbglog(DBG_INFO, "ngcd: wait loop skipping %s\n", ngcd_idle_skip ? "on" : "off");
+        }
         if (!strncmp(l, "cpu=", 4)) {
             int mhz = atoi(l + 4);
             if (mhz >= 12 && mhz <= 24) {
@@ -381,10 +386,12 @@ static void m_run_frame(void) {
 #ifdef NGCD_PERF
     prof_emu += timer_us_gettime64() - t0;
     if (++prof_frames == 120) {
-        dbglog(DBG_INFO, "ngcd/frame us: emu %u (z80 %u, ym %u), draw %u (per shown frame), audio %u; CD sectors %u, cdda underruns %u, ym underruns %u\n",
+        dbglog(DBG_INFO, "ngcd/frame us: emu %u (z80 %u, ym %u), draw %u (per shown frame), audio %u; CD sectors %u, cdda underruns %u, ym underruns %u; 68k %d MHz, wait slices skipped %u\n",
                (unsigned)(prof_emu / 120), (unsigned)(ngcd_prof_z80 / 120000), (unsigned)(ngcd_prof_ym / 120000),
                prof_renders ? (unsigned)(prof_render / prof_renders) : 0, (unsigned)(prof_audio / 120),
-               (unsigned)(ng.sectors_read - prof_sectors), (unsigned)cd_underruns, (unsigned)ym_underruns);
+               (unsigned)(ng.sectors_read - prof_sectors), (unsigned)cd_underruns, (unsigned)ym_underruns,
+               ngcd_cpu_clock8 * 3, (unsigned)ngcd_idle_slices);
+        ngcd_idle_slices = 0;
         if (ngcd_pvr_quads)
             dbglog(DBG_INFO, "ngcd/pvr: %u rects/frame, %u tiles converted, %u cache overflows, %u rects dropped\n",
                    (unsigned)(ngcd_pvr_quads / (prof_renders ? prof_renders : 1)),
