@@ -3,6 +3,21 @@
 PC-build frames and audio were checked byte for byte against the previous
 revision after every change that was not meant to alter emulation.
 
+## r14
+- Raster effects. Sprite table (SCB2-4) words changed while the picture is
+  drawn are logged with their line; in frames where the game also takes
+  raster interrupts during the picture, the sprites they belong to (with
+  their sticky chains) are drawn per run of lines with the tables of that
+  run, the others once as before (both in the PVR rectangles and in the
+  software renderer). Riding Hero's road and Neo Turf Masters' lake and sky
+  now match MAME; frames without raster interrupts are drawn as in r13
+  (Samurai Shodown II, Metal Slug: PC-build pictures byte for byte the
+  same). SH4 cost of building the rectangles in Riding Hero's race: 0.22M
+  instructions a frame instead of 0.10M.
+- Shrunk sprites with the 96-per-line limit reached: rows outside the
+  range being drawn are no longer walked.
+- Debug log: raster frames in `ngcd/pvr`.
+
 ## r13
 - `NGCD.CFG`: `region=jp|us|eu` (the BIOS reads the console's region;
   Samurai Shodown II shows its US title with `us`), `video=640` (640x480

@@ -2,10 +2,20 @@
    converted disc (tools/ngcdconv), dumps frames (PPM) and audio (WAV).
    usage: ngcd_host bios.bin lo.rom|- discdir frames every outdir [script]
    script: "frame:KEYS,frame:KEYS" keys U D L R a b c d S(start) s(select),
-           each held for 8 frames */
+           each held for 8 frames
+   env: NGCD_REGION=0|1|2 (jp/us/eu), NGCD_QCHECK=1 (every frame: the PVR
+        rectangles rasterized against the software picture; NGCD_QALL=1
+        lists every differing frame, NGCD_QDUMP=frame writes sw.ppm/hw.ppm),
+        NGCD_RSTAT=1 (rows/words of sprite table writes during the picture),
+        NGCD_QUADSTAT=1 (rectangle counts; with -DNGCD_MARK qemu-sh4 marks
+        around building them) */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef NGCD_MARK
+#include <unistd.h>
+#include <sys/syscall.h>
+#endif
 #include "../src/core/ngcd.h"
 #include "../src/core/nga.h"
 
@@ -168,7 +178,13 @@ int main(int argc, char **argv) {
 #endif
         if (getenv("NGCD_QUADSTAT")) {   /* PVR path statistics */
             static ngcd_quad_t q[20000];
+#ifdef NGCD_MARK
+            syscall(20, 0x4E474344, 0);
+#endif
             int nq = ngcd_build_quads(q, 20000);
+#ifdef NGCD_MARK
+            syscall(20, 0x4E474344, 1);
+#endif
             if (nq > 3000) fprintf(stderr, "frame %d: %d quads\n", f, nq);
         }
         int n = ngcd_audio_take(ym, 4096);
@@ -193,6 +209,25 @@ int main(int argc, char **argv) {
             fwrite(ng.ram, 1, NGCD_RAM_SIZE, o);
             fclose(o);
           } }
+        if (getenv("NGCD_QCHECK")) {        /* PVR rectangles against the software picture */
+            extern int ngcd_quad_check(const uint16_t *, int, int *, int *);
+            extern uint32_t ngcd_raster_frames;
+            static long bad_frames, frames_n; int fx, fy;
+            ngcd_render(fb, NGCD_FB_W);
+            int b = ngcd_quad_check(fb, NGCD_FB_W, &fx, &fy);
+            frames_n++;
+            if (b && getenv("NGCD_QDUMP") && f == atoi(getenv("NGCD_QDUMP"))) {
+                extern uint16_t *ngcd_quad_check_pic;
+                snprintf(p, sizeof p, "%s/sw.ppm", argv[6]); dump(p);
+                memcpy(fb, ngcd_quad_check_pic, NGCD_FB_W * NGCD_FB_H * 2);
+                snprintf(p, sizeof p, "%s/hw.ppm", argv[6]); dump(p);
+                ngcd_render(fb, NGCD_FB_W);
+            }
+            if (getenv("NGCD_RSTAT")) { extern void ngcd_raster_stats(int *, int *, int *); int r, w, l; ngcd_raster_stats(&r, &w, &l);
+                if (w) fprintf(stderr, "rstat %d rows %d words %d late %d\n", f, r, w, l); }
+            if (b) { bad_frames++; if (bad_frames <= 20 || getenv("NGCD_QALL")) fprintf(stderr, "frame %d: %d pixels differ, first (%d,%d)\n", f, b, fx, fy); }
+            if (f == frames - 1) fprintf(stderr, "quad check: %ld of %ld frames differ, %u raster frames\n", bad_frames, frames_n, ngcd_raster_frames);
+        }
         if (every && f % every == every - 1) {
             ngcd_render(fb, NGCD_FB_W);
             snprintf(p, sizeof p, "%s/f%06d.ppm", argv[6], f + 1);

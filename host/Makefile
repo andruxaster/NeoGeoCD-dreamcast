@@ -3,7 +3,7 @@
 #   make            -> ngcd_host
 #   ./ngcd_host neocd.bin ng-lo.rom|- discdir frames every outdir [script]
 CC     = gcc
-CFLAGS = -O2 -g -Wall -Wno-unused-function -I../src/core -Imusashi
+CFLAGS = -O2 -g -Wall -DNGCD_QUAD_CHECK -Wno-unused-function -I../src/core -Imusashi
 CORE   = ../src/core/ngcd.c ../src/core/mem.c ../src/core/cd.c ../src/core/video.c \
          ../src/core/ym2610.c
 SRC    = main.c cpu_musashi.c z80_zazu.c z80.c $(CORE) \

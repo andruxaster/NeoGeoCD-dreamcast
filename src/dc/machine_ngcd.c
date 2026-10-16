@@ -29,6 +29,7 @@
 int  ngcd_pvr_init(void);
 void ngcd_pvr_draw(float ox, float oy);
 extern uint32_t ngcd_pvr_tiles_made, ngcd_pvr_quads, ngcd_pvr_overflow, ngcd_pvr_dropped;
+extern uint32_t ngcd_raster_frames;           /* video.c */
 
 #define OUT_RATE  44100
 
@@ -431,10 +432,12 @@ static void m_run_frame(void) {
                ngcd_cpu_clock8 * 3, (unsigned)ngcd_idle_slices);
         ngcd_idle_slices = 0;
         if (ngcd_pvr_quads)
-            dbglog(DBG_INFO, "ngcd/pvr: %u rects/frame, %u tiles converted, %u cache overflows, %u rects dropped\n",
+            dbglog(DBG_INFO, "ngcd/pvr: %u rects/frame, %u tiles converted, %u cache overflows, %u rects dropped, %u raster frames\n",
                    (unsigned)(ngcd_pvr_quads / (prof_renders ? prof_renders : 1)),
-                   (unsigned)ngcd_pvr_tiles_made, (unsigned)ngcd_pvr_overflow, (unsigned)ngcd_pvr_dropped);
+                   (unsigned)ngcd_pvr_tiles_made, (unsigned)ngcd_pvr_overflow, (unsigned)ngcd_pvr_dropped,
+                   (unsigned)ngcd_raster_frames);
         ngcd_pvr_quads = ngcd_pvr_tiles_made = ngcd_pvr_overflow = ngcd_pvr_dropped = 0;
+        ngcd_raster_frames = 0;
         prof_emu = prof_render = prof_audio = 0;
         prof_renders = 0;
         ngcd_prof_ym = ngcd_prof_z80 = 0;

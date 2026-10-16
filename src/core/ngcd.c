@@ -124,8 +124,12 @@ static void t_vbl(void) {
     ngcd_timer_arm_rel(T_VBL, PIX2M(FRAME_PIXELS));
 }
 
+uint32_t ngcd_hbl_irqs;                       /* raster interrupts during this frame's picture */
+
 static void t_hbl(void) {
     if ((ng.hirq_control & 0x10) && (ng.irq_mask2 & 0x300) == 0x300) {
+        int row = ngcd_screen_y() - NGCD_ACTIVE_TOP;
+        if (row >= 0 && row < NGCD_FB_H) ngcd_hbl_irqs++;
         ng.pending_irq |= IRQ_RASTER;
         ngcd_update_irq();
     }

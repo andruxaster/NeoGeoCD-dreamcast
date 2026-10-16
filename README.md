@@ -23,6 +23,7 @@ BIOS files and games are not included.
 | Metal Slug | runs; use `cpu=18` (see [NGCD.CFG](#ngcdcfg)) to avoid the game's own slowdown |
 | Metal Slug 2 | runs; use `cpu=24` (the game's own slowdown is heavier) |
 | Neo Turf Masters | runs |
+| Riding Hero | road and track drawn line by line in the PC build (as in MAME); not yet tried on a Dreamcast |
 
 "Runs" means tested on a Dreamcast or in Flycast: menus, loading, gameplay.
 
@@ -241,8 +242,14 @@ turns wait-loop skipping off.
 - More than 9000 rectangles in a frame, or a tile cache full of tiles used
   by the frame: the extra rectangles are not drawn (`rects dropped` in the
   log). Not seen in the tested games.
-- Sprite table changes in the middle of the picture (raster effects) are
-  not drawn line by line; the frame uses the tables as they are at its end.
+- Raster effects: when a game takes raster interrupts during the picture
+  and rewrites the sprite tables (Riding Hero's road, the lake and sky of
+  Neo Turf Masters, Samurai Shodown III's backgrounds), the sprites it
+  changes are drawn run of lines by run of lines with the tables of each
+  run (checked against MAME). Only the sprite tables (SCB2-4) are followed;
+  tile numbers, palettes and the fix layer changed in the middle of the
+  picture still show as they are at the end of the frame. Not yet tried:
+  Super Sidekicks 2 / 3.
 - A ~0.05 s gap in the sound when the CD audio track changes.
 - Fine dithering (one-pixel checkerboards, e.g. Samurai Shodown III's life
   bars) shows rainbow artefacts over composite / RF, as any sharp 1:1
