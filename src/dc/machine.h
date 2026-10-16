@@ -19,15 +19,17 @@ typedef struct {
 
     /* data[i] is NULL for a missing optional file; sizes[i] = loaded size */
     void     (*init)(uint8_t *const *data, const uint32_t *sizes);
-    /* every controller (port 0..3): buttons (CONT_*), analog triggers 0..255;
-       a missing controller is reported with buttons = 0 */
-    void     (*set_pad_n)(int port, uint32_t buttons, int ltrig, int rtrig);
+    /* every controller (port 0..3): buttons (CONT_*), analog triggers 0..255,
+       analog stick -128..127; a missing controller is reported with all 0 */
+    void     (*set_pad_n)(int port, uint32_t buttons, int ltrig, int rtrig, int joyx, int joyy);
     void     (*run_frame)(void);                        /* 1/60 s of machine time */
     /* the picture is drawn by the PVR: pvr_init() after the PVR is set up
        (0 = ok), pvr_draw() submits the lists of one frame between
        pvr_scene_begin and pvr_scene_finish (320x240 screen) */
     int      (*pvr_init)(void);
     void     (*pvr_draw)(void);
+    /* after init(): 2 for a 640x480 screen instead of 320x240 (NULL = 1) */
+    int      (*video_scale)(void);
     /* n = number of int16 values (stereo: 2 per sample frame) */
     void     (*audio)(int16_t *out, int n, uint32_t rate);
 } machine_t;

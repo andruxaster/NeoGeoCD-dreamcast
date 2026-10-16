@@ -3,6 +3,14 @@
 PC-build frames and audio were checked byte for byte against the previous
 revision after every change that was not meant to alter emulation.
 
+## r13
+- `NGCD.CFG`: `region=jp|us|eu` (the BIOS reads the console's region;
+  Samurai Shodown II shows its US title with `us`), `video=640` (640x480
+  screen with every pixel 2x2, for VGA and emulators that smooth a 320-wide
+  screen; textures stay point sampled), `stick=0|1` (analog stick as the
+  joystick, on by default).
+- PC build: `NGCD_REGION=0|1|2`.
+
 ## r12
 - The 68000's wait loops are skipped: a two-instruction loop that only
   reads RAM (`tst`/`btst`/`cmpi` + `beq`/`bne`, `bclr` + `beq`) found at the

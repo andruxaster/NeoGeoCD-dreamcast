@@ -244,9 +244,13 @@ static void update_fix(uint32_t gen) {
     fix_made = gen;
 }
 
+/* picture scale on screen: 1 (320x240 mode) or 2 (640x480, NGCD.CFG video=640) */
+float ngcd_pvr_scale = 1.0f;
+
 /* call between pvr_scene_begin() and pvr_scene_finish(); the picture's
    top left corner goes to (ox, oy) on screen */
 void ngcd_pvr_draw(float ox, float oy) {
+    const float sc = ngcd_pvr_scale;
     if (!ready) return;
     uint32_t gen = ++ngcd_vid_gen;
     ngcd_frame_tables_enter();
@@ -270,7 +274,7 @@ void ngcd_pvr_draw(float ox, float oy) {
     }
     pvr_list_begin(PVR_LIST_OP_POLY);
     header(&hdr_bg);
-    float x1 = ox + NGCD_FB_W, y1 = oy + NGCD_FB_H;
+    float x1 = ox + NGCD_FB_W * sc, y1 = oy + NGCD_FB_H * sc;
     vtx(PVR_CMD_VERTEX, ox, oy, 0.5f, 0, 0, bg);
     vtx(PVR_CMD_VERTEX, x1, oy, 0.5f, 0, 0, bg);
     vtx(PVR_CMD_VERTEX, ox, y1, 0.5f, 0, 0, bg);
@@ -294,7 +298,7 @@ void ngcd_pvr_draw(float ox, float oy) {
         }
         float u0 = q->hflip ? 1.0f : 0.0f, u1 = 1.0f - u0;
         float v0 = q->v0 * (1.0f / 16), v1 = q->v1 * (1.0f / 16);
-        float qx0 = ox + q->x0, qx1 = ox + q->x1, qy0 = oy + q->y0, qy1 = oy + q->y1;
+        float qx0 = ox + q->x0 * sc, qx1 = ox + q->x1 * sc, qy0 = oy + q->y0 * sc, qy1 = oy + q->y1 * sc;
         z += 1.0f / 65536.0f;
         vtx(PVR_CMD_VERTEX, qx0, qy0, z, u0, v0, 0xFFFFFFFF);
         vtx(PVR_CMD_VERTEX, qx1, qy0, z, u1, v0, 0xFFFFFFFF);

@@ -121,8 +121,8 @@ static void poll_pad(int *quit) {
     for (int p = 0; p < 4; p++) {
         maple_device_t *d = maple_enum_type(p, MAPLE_FUNC_CONTROLLER);
         cont_state_t *s = d ? (cont_state_t *)maple_dev_status(d) : NULL;
-        if (!s) { machine.set_pad_n(p, 0, 0, 0); continue; }
-        machine.set_pad_n(p, s->buttons, s->ltrig, s->rtrig);
+        if (!s) { machine.set_pad_n(p, 0, 0, 0, 0, 0); continue; }
+        machine.set_pad_n(p, s->buttons, s->ltrig, s->rtrig, s->joyx, s->joyy);
         if (p == 0) {
             const uint32_t exit_combo = CONT_START | CONT_A | CONT_B | CONT_X | CONT_Y;
             if ((s->buttons & exit_combo) == exit_combo) *quit = 1;
@@ -149,7 +149,10 @@ int main(int argc, char **argv) {
     if (snd == SND_STREAM_INVALID)
         fatal("snd_stream_alloc failed");
 
-    vid_set_mode(DM_320x240, PM_RGB565);
+    /* 320x240 (240p on a TV, line doubled on VGA); 640x480 when the machine
+       asks for it (NGCD.CFG video=640: VGA and emulators; 480i on a TV) */
+    int scale = machine.video_scale ? machine.video_scale() : 1;
+    vid_set_mode(scale == 2 ? DM_640x480 : DM_320x240, PM_RGB565);
     /* opaque + punch-through lists, room for 9000 textured rectangles
        with a header each */
     pvr_init_params_t params = {

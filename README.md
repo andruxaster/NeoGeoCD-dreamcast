@@ -83,9 +83,33 @@ It writes:
 
 ### NGCD.CFG
 
-A text file in the game's folder, `key=value` lines:
+A text file in the game's folder, `key=value` lines, for example:
 
     cpu=18
+    region=us
+    video=640
+
+| key | values | default |
+|---|---|---|
+| `region` | `jp`, `us`, `eu` | `jp` |
+| `video` | `320`, `640` | `320` |
+| `stick` | `0`, `1` | `1` |
+| `cpu` | `12`, `15`, `18`, `21`, `24` | `12` |
+| `idle` | `0`, `1` | `1` |
+
+`region` — the console's region, read by the BIOS: the BIOS and the games
+show that region's title, language and content (Samurai Spirits in Japan,
+Samurai Shodown in the USA and Europe).
+
+`video` — the screen mode. `320` (default): 320x240, 240p on a TV and line
+doubled on VGA, every Neo Geo pixel is one Dreamcast pixel. `640`: 640x480
+with every pixel drawn 2x2 — the same sharp picture for VGA and for
+emulators that smooth a 320-wide screen when they scale it to the window;
+on a TV 640x480 is interlaced (480i), so keep `320` there. Either way the
+textures are point sampled (no bilinear filtering).
+
+`stick` — `stick=0` leaves the analog stick unused (by default it moves
+like the D-pad, past a dead zone of half its travel).
 
 `cpu` — 68000 clock in MHz: 12 (the real console, default), 15, 18, 21 or
 24. Games that slow down in heavy scenes on the real hardware (Metal Slug
@@ -146,7 +170,7 @@ disc root, as usual.
 
 | Dreamcast | Neo Geo |
 |---|---|
-| D-pad | joystick |
+| D-pad or analog stick | joystick |
 | A / B / X / Y | A / B / C / D |
 | Start | Start |
 | L trigger | Select |

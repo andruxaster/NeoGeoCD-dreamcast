@@ -17,6 +17,7 @@
 #include <kos.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <dc/maple/controller.h>
 #include <dc/vmu_pkg.h>
 #include <dc/vmufs.h>
@@ -294,13 +295,28 @@ static void parse_toc(const uint8_t *b, uint32_t size) {
      cpu=12|15|18|21|24   68000 clock in MHz (12 = real hardware). More
                           makes games that slow down in heavy scenes (as
                           on the real console) slow down less, at a cost
-                          in Dreamcast CPU time. */
+                          in Dreamcast CPU time.
+     region=jp|us|eu      the console's region (default jp): the BIOS and
+                          the games show that region's title, language and
+                          content (e.g. Samurai Spirits / Samurai Shodown)
+     video=320|640        screen mode: 320 = 320x240 (default; 240p on a TV,
+                          line doubled on VGA), 640 = 640x480 with every
+                          pixel drawn 2x2 (VGA and emulators; 480i on a TV)
+     stick=0|1            the analog stick as the joystick (default 1) */
+static int cfg_region = 0, cfg_scale = 1, cfg_stick = 1;
+
+static int cfg_is(const char *v, const char *a, const char *b, const char *c) {
+    size_t n = strcspn(v, " \t\r");
+    return (n == strlen(a) && !strncasecmp(v, a, n)) || (b && n == strlen(b) && !strncasecmp(v, b, n))
+        || (c && n == strlen(c) && !strncasecmp(v, c, n));
+}
+
 static void load_config(void) {
     char path[96];
     snprintf(path, sizeof path, "%sNGCD.CFG", disc_dir);
     file_t f = fs_open(path, O_RDONLY);
     if (f == FILEHND_INVALID) return;
-    char buf[512];
+    char buf[1024];
     ssize_t n = fs_read(f, buf, sizeof(buf) - 1);
     fs_close(f);
     if (n <= 0) return;
@@ -320,6 +336,19 @@ static void load_config(void) {
                 dbglog(DBG_INFO, "ngcd: 68000 at %d MHz\n", ngcd_cpu_clock8 * 3);
             }
         }
+        if (!strncmp(l, "region=", 7)) {
+            const char *v = l + 7;
+            if (cfg_is(v, "jp", "japan", "0")) cfg_region = 0;
+            else if (cfg_is(v, "us", "usa", "1")) cfg_region = 1;
+            else if (cfg_is(v, "eu", "europe", "2")) cfg_region = 2;
+            dbglog(DBG_INFO, "ngcd: region %s\n", cfg_region == 0 ? "Japan" : cfg_region == 1 ? "USA" : "Europe");
+        }
+        if (!strncmp(l, "video=", 6)) {
+            cfg_scale = atoi(l + 6) == 640 ? 2 : 1;
+            dbglog(DBG_INFO, "ngcd: screen %s\n", cfg_scale == 2 ? "640x480" : "320x240");
+        }
+        if (!strncmp(l, "stick=", 6))
+            cfg_stick = atoi(l + 6) != 0;
         l = next;
     }
 }
@@ -335,6 +364,7 @@ static void m_init(uint8_t *const *d, const uint32_t *sz) {
 
     mutex_init(&ring_lock, MUTEX_TYPE_NORMAL);
     if (ngcd_init(d[F_BIOS], d[F_LO], &toc, &disc_io) != 0) die("out of memory");
+    ng.nationality = (uint32_t)cfg_region;    /* read by the BIOS from $FF011C */
     free(d[F_BIOS]); free(d[F_LO]); free(d[F_TOC]);
     backup_load();
     thd_create(1, reader_thread, NULL);
@@ -356,9 +386,17 @@ static uint8_t map_pad(uint32_t b) {
     return v;
 }
 
-static void m_set_pad_n(int port, uint32_t b, int lt, int rt) {
+static void m_set_pad_n(int port, uint32_t b, int lt, int rt, int jx, int jy) {
     (void)rt;
     if (port > 1) return;
+    if (cfg_stick) {                          /* the stick as the joystick, past a dead zone */
+        if (jx < -64) b |= CONT_DPAD_LEFT;
+        if (jx > 64)  b |= CONT_DPAD_RIGHT;
+        if (jy < -64) b |= CONT_DPAD_UP;
+        if (jy > 64)  b |= CONT_DPAD_DOWN;
+    }
+    if ((b & CONT_DPAD_LEFT) && (b & CONT_DPAD_RIGHT)) b &= ~(CONT_DPAD_LEFT | CONT_DPAD_RIGHT);
+    if ((b & CONT_DPAD_UP) && (b & CONT_DPAD_DOWN)) b &= ~(CONT_DPAD_UP | CONT_DPAD_DOWN);
     pad[port] = map_pad(b);
     uint8_t start = port ? 0x04 : 0x01, select = port ? 0x08 : 0x02;
     if (b & CONT_START) sys &= ~start; else sys |= start;
@@ -407,11 +445,15 @@ static void m_run_frame(void) {
 }
 
 static int m_pvr_init(void) { return ngcd_pvr_init(); }
+static int m_video_scale(void) { return cfg_scale; }
+extern float ngcd_pvr_scale;
 static void m_pvr_draw(void) {
 #ifdef NGCD_PERF
     uint64_t t0 = timer_us_gettime64();
 #endif
-    ngcd_pvr_draw(0.0f, (240 - NGCD_FB_H) / 2);        /* 240p, picture 1:1 */
+    /* 240p, picture 1:1; or 640x480 with every pixel 2x2 */
+    ngcd_pvr_scale = (float)cfg_scale;
+    ngcd_pvr_draw(0.0f, (float)((240 - NGCD_FB_H) / 2 * cfg_scale));
 #ifdef NGCD_PERF
     prof_render += timer_us_gettime64() - t0;
     prof_renders++;
@@ -500,5 +542,6 @@ const machine_t machine = {
     .run_frame    = m_run_frame,
     .audio        = m_audio,
     .pvr_init     = m_pvr_init,
+    .video_scale  = m_video_scale,
     .pvr_draw     = m_pvr_draw,
 };

@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
     if (getenv("NGCD_CDSPEED")) ng.cd_speed_mul = atoi(getenv("NGCD_CDSPEED"));
     if (getenv("NGCD_CPU_MHZ")) ngcd_cpu_clock8 = atoi(getenv("NGCD_CPU_MHZ")) / 3;   /* 12..24 */
     if (getenv("NGCD_IDLE")) ngcd_idle_skip = atoi(getenv("NGCD_IDLE"));            /* 0 = off */
+    if (getenv("NGCD_REGION")) ng.nationality = (uint32_t)atoi(getenv("NGCD_REGION"));  /* 0 jp 1 us 2 eu */
     int frames = atoi(argv[4]), every = atoi(argv[5]);
     const char *script = argc > 7 ? argv[7] : NULL;
     snprintf(p, sizeof p, "%s/audio.wav", argv[6]);
