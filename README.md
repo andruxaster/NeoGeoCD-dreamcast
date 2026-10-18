@@ -22,7 +22,7 @@ BIOS files and games are not included.
 | Shinsetsu Samurai Spirits: Bushidō Retsuden (English translation 1.10) | runs |
 | Metal Slug | runs; use `cpu=18` (see [NGCD.CFG](#ngcdcfg)) to avoid the game's own slowdown |
 | Metal Slug 2 | runs; use `cpu=24` (the game's own slowdown is heavier) |
-| Neo Turf Masters | runs |
+| Neo Turf Masters | runs; lake and sky drawn per line as in MAME (r15: no jitter) |
 | Riding Hero | road and track drawn line by line in the PC build (as in MAME); not yet tried on a Dreamcast |
 
 "Runs" means tested on a Dreamcast or in Flycast: menus, loading, gameplay.

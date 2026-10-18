@@ -111,8 +111,15 @@ static void ym_timer_handler(int channel, int count) {
 static void ym_irq_handler(int irq) { z80if_irq(irq); }
 
 /* ------------------------------------------------------------ timers */
-void ngcd_timer_arm(int t, int32_t delay) { ng.t[t].delay = delay; ng.t[t].active = 1; }
-void ngcd_timer_arm_rel(int t, int32_t delay) { ng.t[t].delay += delay; ng.t[t].active = 1; }
+/* armed from inside a 68000 slice (a register write) to fire before the
+   slice's planned end: the slice ends here, so the timer fires on time
+   (the raster timer reloaded by a write: Neo Turf Masters' lake, else
+   the interrupts until the slice end were lost) */
+static inline void arm_check(int t) {
+    if (ng.in_slice && ng.t[t].delay < ng.slice_len) cpu_end_slice();
+}
+void ngcd_timer_arm(int t, int32_t delay) { ng.t[t].delay = delay; ng.t[t].active = 1; arm_check(t); }
+void ngcd_timer_arm_rel(int t, int32_t delay) { ng.t[t].delay += delay; ng.t[t].active = 1; arm_check(t); }
 
 static void t_vbl(void) {
     if ((ng.irq_mask2 & 0x030) == 0x030) {
@@ -291,6 +298,11 @@ int32_t ngcd_slice_elapsed(void) {
     return ng.in_slice ? CPU2M(cpu_elapsed()) : 0;
 }
 
+int ngcd_wtrace;
+int ngcd_screen_x(void) {
+    int32_t into_frame = NGCD_CYCLES_PER_FRAME - ng.remaining + ngcd_slice_elapsed();
+    return (VBL_IRQ_X + M2PIX(into_frame)) % NGCD_SCREEN_W_PX;
+}
 int ngcd_screen_y(void) {
     int32_t into_frame = NGCD_CYCLES_PER_FRAME - ng.remaining + ngcd_slice_elapsed();
     int32_t px = M2PIX(into_frame);

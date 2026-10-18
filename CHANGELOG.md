@@ -3,6 +3,18 @@
 PC-build frames and audio were checked byte for byte against the previous
 revision after every change that was not meant to alter emulation.
 
+## r15
+- Raster timer: when a register write arms a timer to fire before the end
+  of the 68000 slice being run, the slice now ends there. Before, the
+  raster interrupts until the slice end were lost: Neo Turf Masters'
+  lake started 0-6 lines late, a different line from frame to frame (the
+  picture jittered). Now its split line is the same in every frame and
+  the same as in MAME (checked with a write trace on both). Samurai
+  Shodown II/III/IV, Metal Slug, Riding Hero: PC-build pictures byte for
+  byte the same as r14 over 20000 frames.
+- PC build: `NGCD_FROM` (first frame to dump), `NGCD_RLOG`/`NGCD_RLOGN`
+  (raster log), `NGCD_WT` (LSPC write trace).
+
 ## r14
 - Raster effects. Sprite table (SCB2-4) words changed while the picture is
   drawn are logged with their line; in frames where the game also takes

@@ -91,6 +91,13 @@ void ngcd_raster_stats(int *rows, int *words, int *late) {
     *rows = r; *words = rlog_n; *late = l;
 }
 
+#ifndef _arch_dreamcast
+#include <stdio.h>
+void ngcd_rlog_dump(int f) {
+    for (int i = 0; i < rlog_n; i++)
+        fprintf(stderr, "rl %d row %3d off %03X %04X->%04X\n", f, rlog[i].row, rlog[i].off, rlog[i].old, rlog[i].val);
+}
+#endif
 /* a sprite table word is about to change */
 static void late_note(void) {
     int row = ngcd_screen_y() - NGCD_ACTIVE_TOP;
@@ -127,12 +134,21 @@ uint16_t ngcd_lspc_read(uint32_t a) {
 }
 
 void ngcd_lspc_write(uint32_t a, uint16_t v) {
+#ifndef _arch_dreamcast
+    { extern int ngcd_wtrace; extern int ngcd_screen_x(void);
+      if (ngcd_wtrace && a >= 6) fprintf(stderr, "wt %d %d reg%X %04X\n", ngcd_screen_y(), ngcd_screen_x(), a, v); }
+#endif
     switch (a) {
     case 0x0:
         ng.vram_offset = v;
         ng.vram_data = ng.vram[ng.vram_offset];
         break;
     case 0x2:
+#ifndef _arch_dreamcast
+        { extern int ngcd_wtrace; extern int ngcd_screen_x(void);
+          if (ngcd_wtrace && (ng.vram_offset == 0x8201 || ng.vram_offset == 0x8401))
+              fprintf(stderr, "wt %d %d %04X %04X\n", ngcd_screen_y(), ngcd_screen_x(), ng.vram_offset, v); }
+#endif
         if (ng.vram_offset < 0x8800) {
             uint32_t so = ng.vram_offset - SCB_BASE;
             if (so < SCB_WORDS && ng.vram[ng.vram_offset] != v) {

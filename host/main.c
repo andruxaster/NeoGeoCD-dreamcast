@@ -169,6 +169,8 @@ int main(int argc, char **argv) {
         { extern int ngcd_fine; static int ff = -1; if (ff < 0) ff = getenv("NGCD_FINE") ? atoi(getenv("NGCD_FINE")) : 0;
           ngcd_fine = (ff && f >= ff); }
 #endif
+        { extern int ngcd_wtrace; static int wf = -2; if (wf == -2) wf = getenv("NGCD_WT") ? atoi(getenv("NGCD_WT")) : -1;
+          ngcd_wtrace = wf >= 0 && f >= wf && f < wf + 3; if (ngcd_wtrace) fprintf(stderr, "wt frame %d\n", f); }
         ngcd_run_frame();
 
 #ifdef CSIM
@@ -187,6 +189,7 @@ int main(int argc, char **argv) {
 #endif
             if (nq > 3000) fprintf(stderr, "frame %d: %d quads\n", f, nq);
         }
+        if (getenv("NGCD_RLOG")) { extern void ngcd_rlog_dump(int); int a = atoi(getenv("NGCD_RLOG")); if (f >= a && f < a + (getenv("NGCD_RLOGN") ? atoi(getenv("NGCD_RLOGN")) : 4)) ngcd_rlog_dump(f); }
         int n = ngcd_audio_take(ym, 4096);
         for (int i = 0; i < n; i++) {
             int16_t cd[2];
@@ -225,9 +228,12 @@ int main(int argc, char **argv) {
             }
             if (getenv("NGCD_RSTAT")) { extern void ngcd_raster_stats(int *, int *, int *); int r, w, l; ngcd_raster_stats(&r, &w, &l);
                 if (w) fprintf(stderr, "rstat %d rows %d words %d late %d\n", f, r, w, l); }
+            if (getenv("NGCD_RON")) { static uint32_t lr; extern uint32_t ngcd_hbl_irqs; fprintf(stderr, "ron %d %d hbl %u\n", f, ngcd_raster_frames != lr, ngcd_hbl_irqs); lr = ngcd_raster_frames; }
             if (b) { bad_frames++; if (bad_frames <= 20 || getenv("NGCD_QALL")) fprintf(stderr, "frame %d: %d pixels differ, first (%d,%d)\n", f, b, fx, fy); }
             if (f == frames - 1) fprintf(stderr, "quad check: %ld of %ld frames differ, %u raster frames\n", bad_frames, frames_n, ngcd_raster_frames);
         }
+        { static int from = -2; if (from == -2) from = getenv("NGCD_FROM") ? atoi(getenv("NGCD_FROM")) : 0;
+          if (f + 1 < from) continue; }
         if (every && f % every == every - 1) {
             ngcd_render(fb, NGCD_FB_W);
             snprintf(p, sizeof p, "%s/f%06d.ppm", argv[6], f + 1);
