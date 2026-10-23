@@ -224,6 +224,21 @@ core was compared with neocd_libretro frame by frame.
 `NGCD_CPU_MHZ=18` in the environment sets the 68000 clock, `NGCD_IDLE=0`
 turns wait-loop skipping off.
 
+## PlayStation 2 (trial build)
+
+The same core on the PS2: `make -f Makefile.ps2` (ps2dev: ps2sdk and gsKit,
+tried with GCC 15.2) makes `ngcd-ps2.elf`. 68000 on FAME C (PicoDrive's C
+FAME), Z80 on the PC build's C core; the core's software renderer draws a
+320x224 texture the GS shows; sound through audsrv at 44100 Hz. Game files
+as on the Dreamcast (tools/ngcdconv), in the ELF's folder or the folder
+given as its first argument; backup RAM on `mc0:/NGCDPS2/BACKUP.BIN`. Pad:
+cross A, circle B, square C, triangle D, left stick as the joystick;
+L1+R1+L2+R2+Start+Select quits. NGCD.CFG adds `video=240p|480i`,
+`tv=ntsc|pal`, `filter=0|1`. Cost under qemu-mipsel: 2.2-2.6M MIPS
+instructions a frame for the emulation plus 1.1-3M for the software
+renderer; pictures are skipped (up to 3 in a row) when behind. Not yet run
+on a PS2 or in PCSX2.
+
 ## Fixes to third-party cores
 
 - **FAME** (`src/cpu/fame/fame.s`): `DIVS` flagged an overflow on almost any

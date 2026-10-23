@@ -23,3 +23,6 @@ TOC.BIN
 *.cdi
 *.gdi
 *.7z
+obj-ps2/
+ngcd.elf
+ngcd-ps2.elf
