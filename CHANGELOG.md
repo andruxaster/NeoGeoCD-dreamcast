@@ -4,12 +4,9 @@ PC-build frames and audio were checked byte for byte against the previous
 revision after every change that was not meant to alter emulation.
 
 ## r16
-- PlayStation 2 trial build (`Makefile.ps2`, `src/ps2/`): the same core
-  with FAME C (`src/cpu/famec/`, from PicoDrive, with the Neo Geo's own
-  interrupt vectors) and the PC build's Z80; software renderer into a GS
-  texture (`NGCD_PAL_GS`: palette in GS CT16 order), audsrv sound with the
-  Dreamcast build's resampler, libpad, stdio files, backup RAM on the
-  memory card, NGCD.CFG `video`, `tv`, `filter`. Dreamcast build unchanged.
+- The PlayStation 2 build tried in this revision lives in its own
+  repository, [NeoGeoCD-ps2](https://github.com/andruxaster/NeoGeoCD-ps2);
+  nothing of it stays here.
 
 ## r15
 - Raster timer: when a register write arms a timer to fire before the end

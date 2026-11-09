@@ -22,15 +22,6 @@ static const uint8_t X_ZOOM[256] = {
 
 /* ------------------------------------------------------------ palette */
 static uint16_t conv(uint16_t c) {
-#ifdef NGCD_PAL_GS
-    /* PS2 GS 16-bit (CT16): A1 B5 G5 R5, red in the low bits; the dark bit
-       is dropped (half an LSB) */
-    uint16_t gs = (uint16_t)(((c & 0x0F00) >> 7) | ((c & 0x4000) >> 14) |
-                             ((c & 0x00F0) << 2) | ((c & 0x2000) >> 8) |
-                             ((c & 0x000F) << 11) | ((c & 0x1000) >> 2) | 0x8000);
-    if (ng.shadow) gs = (uint16_t)(((gs >> 1) & 0x3DEF) | 0x8000);
-    return gs;
-#endif
     uint16_t out = (uint16_t)(((c & 0x0F00) << 4) | ((c & 0x4000) >> 3) |
                               ((c & 0x00F0) << 3) | ((c & 0x2000) >> 7) |
                               ((c & 0x000F) << 1) | ((c & 0x1000) >> 12));
